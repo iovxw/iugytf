@@ -1,5 +1,7 @@
 # iugytf
 
+![screenshot](screenshot.png)
+
 Telegram 颜文字 Bot <http://telegram.me/ywzbot>
 
 在输入框中输入 `@ywzbot` 使用
