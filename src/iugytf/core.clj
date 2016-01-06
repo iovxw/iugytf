@@ -27,7 +27,7 @@
                       "config.yaml")
                     (slurp)
                     (yaml/parse-string))
-        elist (config :emoticons)
+        klist (config :kaomoji)
         bot (tgapi/new-bot (config :key))]
     (loop [updates (updates-seq bot)]
       (println (first updates))
@@ -35,6 +35,6 @@
         (try
           (tgapi/answer-inline-query bot (query :id)
                                      ; TODO: 使用 offset 翻页
-                                     (gen-answer (query :query) elist))
+                                     (gen-answer (query :query) klist))
           (catch Exception e (log/error e "")))) ; TODO
       (recur (rest updates)))))
