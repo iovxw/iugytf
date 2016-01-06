@@ -21,8 +21,8 @@
                            "message_text" (format "%s %s" %2 query))
                results))
 
-(defn -main [config-file]
-  (let [config (->> (if config-file
+(defn -main [& vars]
+  (let [config (->> (if-let [config-file (first vars)]
                       config-file
                       "config.yaml")
                     (slurp)
