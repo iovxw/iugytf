@@ -1,32 +1,12 @@
 # iugytf
 
-FIXME: description
+Telegram 颜文字 Bot <http://telegram.me/ywzbot>
 
-## Installation
+在输入框中输入 `@ywzbot` 使用
 
-Download from http://example.com/FIXME.
+## Run
 
-## Usage
-
-FIXME: explanation
-
-    $ java -jar iugytf-0.1.0-standalone.jar [args]
-
-## Options
-
-FIXME: listing of options this app accepts.
-
-## Examples
-
-...
-
-### Bugs
-
-...
-
-### Any Other Sections
-### That You Think
-### Might be Useful
+    $ java -jar iugytf-0.1.0-standalone.jar [config-file]
 
 ## License
 

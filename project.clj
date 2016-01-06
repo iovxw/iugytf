@@ -1,8 +1,8 @@
-(defproject iugytf "0.1.0-SNAPSHOT"
-  :description "FIXME: write description"
-  :url "http://example.com/FIXME"
-  :license {:name "Eclipse Public License"
-            :url "http://www.eclipse.org/legal/epl-v10.html"}
+(defproject iugytf "0.1.0"
+  :description "An Emoticon bot for Telegram, use inline mode"
+  :url "http://iovxw.net"
+  :license {:name "The MIT License (MIT)"
+            :url "https://opensource.org/licenses/MIT"}
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/data.json "0.2.6"]
                  [clj-http "2.0.0"]
