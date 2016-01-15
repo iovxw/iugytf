@@ -1,42 +1,42 @@
 (ns iugytf.tgapi
   (:require [clojure.string :as string]
             [clj-http.client :as client]
-            [clojure.data.json :as json])
-  (:import (java.net URLEncoder)))
+            [clojure.data.json :as json]))
+
+(defn- request
+  ([url] (request url nil))
+  ([url body]
+   (let [resp (if body
+                (client/post url {:content-type :json
+                                  :body (json/write-str body)
+                                  :throw-exceptions false})
+                (client/get url {:throw-exceptions false}))
+         code (resp :status)
+         body (resp :body)]
+     (if (or (and (>= code 200) (< code 300))
+             (and (>= code 400) (< code 500)))
+       (let [body (json/read-str body :key-fn keyword)]
+         (when-not (body :ok)
+           (throw (ex-info (format "HTTP: %s, %s"
+                                   code
+                                   (body :description)) resp)))
+         (body :result))
+       (throw (ex-info (format "HTTP: %s" code) resp))))))
+
+(defn req
+  ([bot method] (req bot method nil))
+  ([bot method body]
+   (request (str (bot :api) "/" method) body)))
 
 (defn new-bot [bot-key]
   (let [api (str "https://api.telegram.org/bot" bot-key)
-        body (-> (str api "/getMe")
-                 (slurp)
-                 (json/read-str :key-fn keyword))]
-    (when-not (body :ok)
-      (throw (Exception. (body :description))))
-    (assoc (body :result) :api api)))
-
-(defn- url-encode [v]
-  (-> (format "%s" v)
-      (URLEncoder/encode "UTF-8")))
-
-(defn- gen-query [kv]
-  (->> kv
-       (map #(str (url-encode (first %)) "=" (url-encode (second %))))
-       (string/join "&")))
-
-(defn- gen-url
-  ([bot api]
-   (str (bot :api) "/" api))
-  ([bot api query]
-   (str (bot :api) "/" api "?" (gen-query query))))
+        result (request (str api "/getMe"))]
+   (assoc result :api api)))
 
 (defn get-updates
   ([bot] (get-updates bot 0))
   ([bot offset]
-   (let [body (-> (gen-url bot "getUpdates" {"offset" offset})
-                  (slurp)
-                  (json/read-str :key-fn keyword))]
-     (when-not (body :ok)
-       (throw (Exception. (body :description))))
-     (body :result))))
+   (req bot "getUpdates" {"offset" offset})))
 
 (defn- if-not-nil-add [k v m]
   (if v
@@ -45,16 +45,9 @@
 
 (defn answer-inline-query [bot inline_query_id results &
                           {:keys [cache_time is_personal next_offset]}]
-  (let [body (-> (gen-url bot "answerInlineQuery")
-                 (client/post {:content-type :json
-                               :body (->> {"inline_query_id" inline_query_id
-                                           "results" results}
-                                          (if-not-nil-add "cache_time" cache_time)
-                                          (if-not-nil-add "is_personal" is_personal)
-                                          (if-not-nil-add "next_offset" next_offset)
-                                          (json/write-str))})
-                 (get :body)
-                 (json/read-str :key-fn keyword))]
-    (when-not (body :ok)
-      (throw (Exception. (body :description))))
-    (body :result)))
+  (req bot "answerInlineQuery"
+       (->> {"inline_query_id" inline_query_id
+             "results" results}
+            (if-not-nil-add "cache_time" cache_time)
+            (if-not-nil-add "is_personal" is_personal)
+            (if-not-nil-add "next_offset" next_offset))))
