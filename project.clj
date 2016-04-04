@@ -7,6 +7,7 @@
                  [org.clojure/data.json "0.2.6"]
                  [clj-http "2.0.0"]
                  [clj-yaml "0.4.0"]
+                 [factual/clj-leveldb "0.1.1"]
                  [org.clojure/tools.logging "0.3.1"]]
   :main ^:skip-aot iugytf.core
   :target-path "target/%s"
