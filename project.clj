@@ -5,6 +5,7 @@
             :url "https://opensource.org/licenses/MIT"}
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/data.json "0.2.6"]
+                 [org.clojure/core.match "0.3.0-alpha4"]
                  [clj-http "2.0.0"]
                  [clj-yaml "0.4.0"]
                  [factual/clj-leveldb "0.1.1"]

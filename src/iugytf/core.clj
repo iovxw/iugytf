@@ -2,7 +2,9 @@
   (:require [iugytf.tgapi :as tgapi]
             [clj-yaml.core :as yaml]
             [clj-leveldb :as leveldb]
+            [clojure.string :as string]
             [clojure.data.json :as json]
+            [clojure.core.match :refer [match]]
             [clojure.tools.logging :as log])
   (:gen-class))
 
@@ -72,6 +74,40 @@
            ~(second clauses)
            ~(cons 'cond-let (next (next clauses))))))))
 
+
+(defn split-message [text max-len]
+  (let [text-len (count text)]
+    (loop [begin 0, offset 0, result []]
+      (let [n (if-let [n (string/index-of text "\n" offset)] n text-len)
+            line-len (- n offset)
+            now-len (- n begin)] ; 当前所选定的长度
+        (if (<= (- text-len begin) max-len) ; 剩下的长度小于最大长度
+          (conj result (subs text begin text-len)) ; DONE
+          (if (> line-len max-len) ; 单行大于最大长度，进行行内切分
+            (let [split-len (- max-len (- offset begin))
+                  split-point (+ offset split-len)]
+              (recur split-point split-point
+                     (conj result (subs text begin split-point))))
+            (if (> now-len max-len)
+              (recur offset (inc n) ; 这里的 (dec offset) 是为了去掉最后一个换行
+                     (conj result (subs text begin (dec offset))))
+              (recur begin (inc n) result))))))))
+
+(defn send-message [bot chat-id text & opts]
+  (if (<= (count text) 1024)
+    (apply tgapi/send-message bot chat-id text opts)
+    (let [messages (split-message text 1024)]
+      (doseq [msg messages]
+        (apply tgapi/send-message bot chat-id msg opts)))))
+
+(defn prn-kaomoji-list [bot db user-id raw?]
+  (send-message bot user-id
+                (if raw?
+                  (reduce #(format "%s\n%s" %1 (second %2))
+                          "" (get-user-kaomoji db user-id))
+                  (reduce #(format "%s\n%s. %s" %1 (first %2) (second %2))
+                          "" (get-user-kaomoji db user-id)))))
+
 (defn -main [& vars]
   (let [config (->> (if-let [config-file (first vars)]
                       config-file
@@ -83,16 +119,24 @@
     (reset! default-kaomoji (vec (map-indexed (fn [i m] [i m 0]) (config :kaomoji))))
     (loop [updates (updates-seq bot)]
       (let [u (first updates)]
-        (println u)
-        (cond-let
-         [query (u :inline_query)]
-         (try
+        (prn u)
+        (try
+          (cond-let
+           [query (u :inline_query)]
            (tgapi/answer-inline-query bot (query :id)
                                         ; TODO: 使用 offset 翻页
                                       (gen-answer (query :query)
-                                                  (get-user-kaomoji db (-> query :from :id))))
-           (catch Exception e (log/error e "")))
+                                                  (get-user-kaomoji db (get-in query [:from :id]))))
 
-         [chosen (u :chosen_inline_result)]
-         (update-kaomoji-count db (-> chosen :from :id) (Integer. (chosen :result_id)))))
+           [chosen (u :chosen_inline_result)]
+           (update-kaomoji-count db (get-in chosen [:from :id]) (Integer. (chosen :result_id)))
+
+           [message (u :message)]
+           (when-let [text (message :text)]
+             (when (= (get-in message [:chat :type]) "private") ; 只在私聊中可以使用命令
+               (match (tgapi/parse-cmd bot text)
+                      ["list" _] (prn-kaomoji-list bot db (get-in message [:chat :id]) false)
+                      ["list_raw" _] (prn-kaomoji-list bot db (get-in message [:chat :id]) true)
+                      :else (log/warnf "Unable to parse command: %s" text)))))
+          (catch Exception e (log/error e ""))))
       (recur (rest updates)))))
