@@ -52,6 +52,9 @@
       data)
     @default-kaomoji))
 
+(defn update-user-kaomoji [db user-id kaomoji-list]
+  (leveldb/put db (encode-id user-id) (json/write-str kaomoji-list)))
+
 (defn some-index [f coll]
   (some #(when (f (second %))
            (first %))
@@ -61,9 +64,8 @@
   (let [data (get-user-kaomoji db user-id)
         index (some-index #(= (first %) kaomoji-id) data)
         data (update-in data [index 2] dec)
-        data (sort-by last data)
-        json-str (json/write-str data)]
-    (leveldb/put db (encode-id user-id) json-str)))
+        data (sort-by last data)]
+    (update-user-kaomoji db user-id data)))
 
 (defmacro cond-let [& clauses]
   (when clauses
@@ -108,6 +110,29 @@
                   (reduce #(format "%s\n%s. %s" %1 (first %2) (second %2))
                           "" (get-user-kaomoji db user-id)))))
 
+(defn delete-kaomoji-by [f kaomoji-list]
+  (loop [kaomoji nil result [] l kaomoji-list]
+    (if-let [k (first l)]
+      (if (f k)
+        (recur (second k) result (next l))
+        (recur kaomoji (conj result k) (next l)))
+      [kaomoji result])))
+
+(defn str-to-int [s]
+  (try (Integer. s)
+       (catch Exception _nil)))
+
+(defn delete-kaomoji [bot db user-id target]
+  (let [kaomoji-list (get-user-kaomoji db user-id)
+        find-fn (if-let [id (str-to-int target)]
+                  #(= (first %) id)
+                  #(= (second %) target))
+        [kaomoji result] (delete-kaomoji-by find-fn kaomoji-list)]
+    (if kaomoji
+      (do (update-user-kaomoji db user-id result)
+          (send-message bot user-id (format "删除成功: %s" kaomoji)))
+      (send-message bot user-id "无法根据 ID 或直接匹配找到这个颜文字"))))
+
 (defn -main [& vars]
   (let [config (->> (if-let [config-file (first vars)]
                       config-file
@@ -137,6 +162,7 @@
                (match (tgapi/parse-cmd bot text)
                       ["list" _] (prn-kaomoji-list bot db (get-in message [:chat :id]) false)
                       ["list_raw" _] (prn-kaomoji-list bot db (get-in message [:chat :id]) true)
+                      ["delete" target] (delete-kaomoji bot db (get-in message [:chat :id]) target)
                       :else (log/warnf "Unable to parse command: %s" text)))))
           (catch Exception e (log/error e ""))))
       (recur (rest updates)))))
