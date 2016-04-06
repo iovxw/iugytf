@@ -133,6 +133,18 @@
           (send-message bot user-id (format "删除成功: %s" kaomoji)))
       (send-message bot user-id "无法根据 ID 或直接匹配找到这个颜文字"))))
 
+(defn generate-id [kaomoji-list]
+  (-> (apply max-key first kaomoji-list)
+      first
+      inc))
+
+(defn add-kaomoji [bot db user-id kaomoji]
+  (let [kaomoji-list (get-user-kaomoji db user-id)
+        id (generate-id kaomoji-list)
+        result (conj kaomoji-list [id kaomoji 0])]
+    (update-user-kaomoji db user-id result)
+    (send-message bot user-id (format "添加成功: %s" kaomoji))))
+
 (defn -main [& vars]
   (let [config (->> (if-let [config-file (first vars)]
                       config-file
@@ -162,7 +174,8 @@
                (match (tgapi/parse-cmd bot text)
                       ["list" _] (prn-kaomoji-list bot db (get-in message [:chat :id]) false)
                       ["list_raw" _] (prn-kaomoji-list bot db (get-in message [:chat :id]) true)
-                      ["delete" target] (delete-kaomoji bot db (get-in message [:chat :id]) target)
+                      ["del" target] (delete-kaomoji bot db (get-in message [:chat :id]) target)
+                      ["add" kaomoji] (add-kaomoji bot db (get-in message [:chat :id]) kaomoji)
                       :else (log/warnf "Unable to parse command: %s" text)))))
           (catch Exception e (log/error e ""))))
       (recur (rest updates)))))
