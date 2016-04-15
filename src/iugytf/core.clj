@@ -140,10 +140,17 @@
 
 (defn add-kaomoji [bot db user-id kaomoji]
   (let [kaomoji-list (get-user-kaomoji db user-id)
-        id (generate-id kaomoji-list)
-        result (conj kaomoji-list [id kaomoji 0])]
+        id (generate-id kaomoji-list)]
+    (if (>= (count kaomoji-list) 50)
+      (send-message bot user-id "表情数量已达到 50 个上限。如要添加，请删除不常用表情")
+      (do (update-user-kaomoji db user-id (conj kaomoji-list [id kaomoji 0]))
+          (send-message bot user-id (format "添加成功: %s" kaomoji))))))
+
+(defn sort-kaomoji [bot db user-id]
+  (let [kaomoji-list (get-user-kaomoji db user-id)
+        result (map-indexed (fn [i v] [i (second v) (last v)]) kaomoji-list)]
     (update-user-kaomoji db user-id result)
-    (send-message bot user-id (format "添加成功: %s" kaomoji))))
+    (send-message bot user-id "排序成功，ID 已更新")))
 
 (defn -main [& vars]
   (let [config (->> (if-let [config-file (first vars)]
@@ -176,6 +183,7 @@
                       ["list_raw" _] (prn-kaomoji-list bot db (get-in message [:chat :id]) true)
                       ["del" target] (delete-kaomoji bot db (get-in message [:chat :id]) target)
                       ["add" kaomoji] (add-kaomoji bot db (get-in message [:chat :id]) kaomoji)
+                      ["sort" _] (sort-kaomoji bot db (get-in message [:chat :id]))
                       :else (log/warnf "Unable to parse command: %s" text)))))
           (catch Exception e (log/error e ""))))
       (recur (rest updates)))))
