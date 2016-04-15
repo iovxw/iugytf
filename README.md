@@ -25,6 +25,10 @@ Telegram 颜文字 Bot <http://telegram.me/ywzbot>
     <td>/add</td>
     <td>命令后加颜文字进行添加</td>
   </tr>
+  <tr>
+    <td>/sort</td>
+    <td>重新分配 ID</td>
+  </tr>
 </table>
 
 ## Run
