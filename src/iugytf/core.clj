@@ -179,11 +179,11 @@
            (when-let [text (message :text)]
              (when (= (get-in message [:chat :type]) "private") ; 只在私聊中可以使用命令
                (match (tgapi/parse-cmd bot text)
-                      ["list" _] (prn-kaomoji-list bot db (get-in message [:chat :id]) false)
-                      ["list_raw" _] (prn-kaomoji-list bot db (get-in message [:chat :id]) true)
-                      ["del" target] (delete-kaomoji bot db (get-in message [:chat :id]) target)
-                      ["add" kaomoji] (add-kaomoji bot db (get-in message [:chat :id]) kaomoji)
-                      ["sort" _] (sort-kaomoji bot db (get-in message [:chat :id]))
-                      :else (log/warnf "Unable to parse command: %s" text)))))
+                 ["list" _] (prn-kaomoji-list bot db (get-in message [:chat :id]) false)
+                 ["list_raw" _] (prn-kaomoji-list bot db (get-in message [:chat :id]) true)
+                 ["del" target] (delete-kaomoji bot db (get-in message [:chat :id]) target)
+                 ["add" kaomoji] (add-kaomoji bot db (get-in message [:chat :id]) kaomoji)
+                 ["sort" _] (sort-kaomoji bot db (get-in message [:chat :id]))
+                 :else (log/warnf "Unable to parse command: %s" text)))))
           (catch Exception e (log/error e ""))))
       (recur (rest updates)))))
