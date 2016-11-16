@@ -9,10 +9,10 @@
    (let [resp (if data
                 (client/post url {:content-type :json
                                   :body (json/write-str data)
-                                  :socket-timeout 5000
+                                  :socket-timeout 300000 ; 5 minute
                                   :conn-timeout 5000
                                   :throw-exceptions false})
-                (client/get url {:socket-timeout 5000
+                (client/get url {:socket-timeout 300000 ; 5 minute
                                  :conn-timeout 5000
                                  :throw-exceptions false}))
          code (resp :status)]
